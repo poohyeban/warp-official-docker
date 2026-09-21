@@ -1,0 +1,4 @@
+.env
+warp-data/
+*.zip
+*.log
