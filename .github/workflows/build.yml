@@ -23,31 +23,6 @@ jobs:
           emails = set(re.findall(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}", json.dumps(event)))
           for email in sorted(emails):
               print("::add-mask::" + email)
-      - name: Remove image version with exposed event metadata
-        env:
-          GH_TOKEN: ${{ github.token }}
-        shell: python
-        run: |
-          import json, os, urllib.request
-          owner, package = os.environ["GITHUB_REPOSITORY"].split("/")
-          base = f"https://api.github.com/users/{owner}/packages/container/{package}/versions"
-          headers = {"Authorization": "Bearer " + os.environ["GH_TOKEN"],
-                     "Accept": "application/vnd.github+json",
-                     "X-GitHub-Api-Version": "2022-11-28"}
-          affected = "sha256:2f5a52241c482b50632f837f0aba5d89c30fc1ada0b0965ebb0605c4cbb964db"
-          page = 1
-          while True:
-              request = urllib.request.Request(f"{base}?per_page=100&page={page}", headers=headers)
-              with urllib.request.urlopen(request) as response:
-                  versions = json.load(response)
-              for version in versions:
-                  if version["name"] == affected:
-                      request = urllib.request.Request(f"{base}/{version['id']}", headers=headers, method="DELETE")
-                      with urllib.request.urlopen(request) as response:
-                          print("Removed affected image version:", response.status)
-              if len(versions) < 100:
-                  break
-              page += 1
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
         with:
           persist-credentials: false
@@ -78,3 +53,28 @@ jobs:
             --tag "$IMAGE_NAME:sha-$GITHUB_SHA" \
             --label "org.opencontainers.image.source=https://github.com/$GITHUB_REPOSITORY" \
             --label "org.opencontainers.image.revision=$GITHUB_SHA" .
+      - name: Remove image version with exposed event metadata
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: python
+        run: |
+          import json, os, urllib.request
+          owner, package = os.environ["GITHUB_REPOSITORY"].split("/")
+          base = f"https://api.github.com/users/{owner}/packages/container/{package}/versions"
+          headers = {"Authorization": "Bearer " + os.environ["GH_TOKEN"],
+                     "Accept": "application/vnd.github+json",
+                     "X-GitHub-Api-Version": "2022-11-28"}
+          affected = "sha256:2f5a52241c482b50632f837f0aba5d89c30fc1ada0b0965ebb0605c4cbb964db"
+          page = 1
+          while True:
+              request = urllib.request.Request(f"{base}?per_page=100&page={page}", headers=headers)
+              with urllib.request.urlopen(request) as response:
+                  versions = json.load(response)
+              for version in versions:
+                  if version["name"] == affected:
+                      request = urllib.request.Request(f"{base}/{version['id']}", headers=headers, method="DELETE")
+                      with urllib.request.urlopen(request) as response:
+                          print("Removed affected image version:", response.status)
+              if len(versions) < 100:
+                  break
+              page += 1
