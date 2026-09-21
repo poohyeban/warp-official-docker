@@ -48,7 +48,7 @@ jobs:
           IMAGE_NAME: ${{ steps.image.outputs.name }}
         run: |
           docker buildx build --push --platform linux/amd64 \
-            --provenance=mode=min \
+            --provenance=false \
             --tag "$IMAGE_NAME:latest" \
             --tag "$IMAGE_NAME:sha-$GITHUB_SHA" \
             --label "org.opencontainers.image.source=https://github.com/$GITHUB_REPOSITORY" \
@@ -64,14 +64,19 @@ jobs:
           headers = {"Authorization": "Bearer " + os.environ["GH_TOKEN"],
                      "Accept": "application/vnd.github+json",
                      "X-GitHub-Api-Version": "2022-11-28"}
-          affected = "sha256:2f5a52241c482b50632f837f0aba5d89c30fc1ada0b0965ebb0605c4cbb964db"
+          affected = {
+              "sha256:2f5a52241c482b50632f837f0aba5d89c30fc1ada0b0965ebb0605c4cbb964db",
+              "sha256:6eaedb38f0c1be29baf3b0cd290d520a57fd355ec09ff78d22124d0b01b4d5c8",
+              "sha256:2b96a15b7e6defefdffebac649fbe63a6bcf5813ea0febb7770729565466c9fa",
+              "sha256:59b32a575f0de21e61ae0e4a5fbdbb6ce2e68b7212962e70feed241ca576270f",
+          }
           page = 1
           while True:
               request = urllib.request.Request(f"{base}?per_page=100&page={page}", headers=headers)
               with urllib.request.urlopen(request) as response:
                   versions = json.load(response)
               for version in versions:
-                  if version["name"] == affected:
+                  if version["name"] in affected:
                       request = urllib.request.Request(f"{base}/{version['id']}", headers=headers, method="DELETE")
                       with urllib.request.urlopen(request) as response:
                           print("Removed affected image version:", response.status)
